@@ -21,12 +21,14 @@ func main() {
 	port := os.Getenv("PORT")
 
 	if port == "" {
-		log.Fatal("$PORT must be set")
+		//log.Fatal("$PORT must be set")
+		port ="8080"
 	}
 
-	http.HandleFunc("/conservation/v1/species/", speciesHandler)
+	//http.HandleFunc("/conservation/v1/species/", speciesHandler)
 	http.HandleFunc("/conservation/v1/country/", countryHandler)
-	http.HandleFunc("/conservation/v1/diag/", diagnosticHandler)
+	//	http.HandleFunc("/conservation/v1/diag/", diagnosticHandler)
+
 	//for testing
 	//log.Fatal(http.ListenAndServe(":8080", nil))
 	//for heroku
