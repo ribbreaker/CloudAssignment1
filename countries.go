@@ -8,6 +8,8 @@ import (
 )
 
 var nameAndKeyMap = make(map[string]int)
+var results Results
+var country Country
 
 //Country golint wont leave me alone
 type Country struct {
@@ -35,13 +37,12 @@ type Results struct {
 }
 
 //List a given number of species entries by country
-func countryHandler(w http.ResponseWriter, r *http.Request) {
-	countryIdentifier := r.URL.Path[25:]
 
-	// Country codes are two characters long, if not Error
-	/*if len(countryIdentifier) != 2 {
-		http.Error(w, "Wrong country code used", http.StatusBadRequest)
-	}*/
+/***Currently it only gets the name, flag and code when the limit is omitted, also picking a lower limit after already getting a result will not omit the previous results*********/
+func countryHandler(w http.ResponseWriter, r *http.Request) {
+	var itExists = false
+
+	countryIdentifier := r.URL.Path[25:]
 
 	var limit = 20
 	if r.URL.Query()["limit"] != nil {
@@ -62,20 +63,15 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	//resp.body JSON
-	country := &Country{}
-	err = json.NewDecoder(resp.Body).Decode(country)
+	err = json.NewDecoder(resp.Body).Decode(&country)
 	if err != nil {
 		//handle error
 		fmt.Println("Error reading JSON data", err)
 		return
 	}
 
-	//Loops through all of them and assigns species/specieskey
-
-	//(use map for not getting duplicates)
 	for i := 0; i <= limit; i++ {
-
-		resp, err = http.Get(fmt.Sprintf("http://api.gbif.org/v1/occurrence/search?country=%s&limit=%d", countryIdentifier, limit))
+		resp, err = http.Get("http://api.gbif.org/v1/occurrence/search?country=" + countryIdentifier + "&limit=" + strconv.Itoa(limit))
 		if err != nil {
 			//handle error
 			fmt.Println("Error parsing request", err)
@@ -83,38 +79,31 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer resp.Body.Close()
 
-		//Secondary struct
-		results := &Results{}
-		err = json.NewDecoder(resp.Body).Decode(results)
-		//countryResponse := CountryResponse{}
-		//err = json.NewDecoder(resp.Body).Decode(results)
-		//Maps can't have duplicate values, silly >:)
-
+		err = json.NewDecoder(resp.Body).Decode(&results)
 		fmt.Printf("Species length key from json: %d\n", len(results.Results))
+	}
 
-		//check for duplicates (maybe with a bool)
-		for i := 0; i < len(results.Results); i++ {
-			for j := 0; j < len(results.Results); j++ {
-				if nameAndKeyMap[results.Results[i].Species] != nameAndKeyMap[results.Results[j].Species] {
+	for i := 0; i < len(results.Results); i++ {
+		nameAndKeyMap[results.Results[i].Species] = results.Results[i].SpeciesKey
+		//Maps can't have duplicate values, silly >:)
+	}
 
-				}
+	//iterate though the maps, insert the values into to the arrays
+	for Species, SpeciesKey := range nameAndKeyMap {
+		//check for duplicates in Country with a bool check
+		itExists = false
+		for i := 0; i < len(country.Species); i++ {
+			if country.Species[i] == Species {
+				itExists = true
 			}
-			nameAndKeyMap[results.Results[i].Species] = results.Results[i].SpeciesKey
-
 		}
-
-		//country.Species = append(country.Species, results.Results[i].Species)
-		//country.SpeciesKey = append(country.SpeciesKey, results.Results[i].SpeciesKey)
-		//fmt.Printf("Species key from json: %d\n", len(countryResponse))
-
-		//iterate though the maps, insert the values into to the arrays
-		for Species, SpeciesKey := range nameAndKeyMap {
+		if !itExists {
 			country.Species = append(country.Species, Species)
 			country.SpeciesKey = append(country.SpeciesKey, SpeciesKey)
 		}
+
 	}
 
 	w.Header().Add("content-type", "application/json")
 	_ = json.NewEncoder(w).Encode(country)
 }
-

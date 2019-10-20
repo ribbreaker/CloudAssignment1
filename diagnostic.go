@@ -1,7 +1,7 @@
 package main
-/*
+
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -9,32 +9,34 @@ import (
 
 //Diagnostic golint wont stop hating me
 type Diagnostic struct {
-	statusGBIF  int
-	restCountry int
-	version     string
-	uptime      int64
+	StatusGBIF  int    `json:"gbif"`
+	RestCountry int    `json:"restcountries"`
+	Version     string `json:"version"`
+	Uptime      int    `json:"uptime"`
 }
+
+var upTime = time.Now()
 
 func diagnosticHandler(w http.ResponseWriter, r *http.Request) {
 
-	var diagnosData Diagnostic
+	gbif, err := http.Get("http://api.gbif.org/v1/")
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	gbif, err := http.Get("http://api.gbif.org/v1/occurrence/country")
+	euro, err := http.Get("https://restcountries.eu/rest/v2/")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	
-	euro, err := http.Get("https://restcountries.eu/rest/v2/alpha/VA")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	diagnosData.statusGBIF = gbif.StatusCode
-	diagnosData.restCountry = euro.StatusCode
+
+	gbifStatus := gbif.StatusCode
+	restCountryStatus := euro.StatusCode
 
 	nyTime := time.Now()
-	bigTime := nyTime.Sub(upTime)
+	bigTime := int(nyTime.Sub(upTime) / time.Second)
 
-	fmt.Printf("Diagnostics:\nStatus for gbif: %d\nStatus for restcountry: %d\nVersion: v1\nTime since last restart %d\n",
-		diagnosData.statusGBIF, diagnosData.restCountry, bigTime)
+	var diagnosData = Diagnostic{gbifStatus, restCountryStatus, "v1", bigTime}
+
+	w.Header().Add("content-type", "application/json")
+	_ = json.NewEncoder(w).Encode(diagnosData)
 }
-*/
