@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"strconv"
 )
-
 var nameAndKeyMap = make(map[string]int)
-var results Results
-var country Country
+
 
 //Country golint wont leave me alone
 type Country struct {
@@ -52,7 +50,8 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 			limit = customLimitInt
 		}
 	}
-
+	results := Results{}
+	country := Country{}
 	//restcountries
 	resp, err := http.Get("https://restcountries.eu/rest/v2/alpha/" + countryIdentifier)
 	if err != nil {
@@ -69,19 +68,16 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error reading JSON data", err)
 		return
 	}
-
-	for i := 0; i <= limit; i++ {
-		resp, err = http.Get("http://api.gbif.org/v1/occurrence/search?country=" + countryIdentifier + "&limit=" + strconv.Itoa(limit))
-		if err != nil {
-			//handle error
-			fmt.Println("Error parsing request", err)
-			return
-		}
-		defer resp.Body.Close()
-
-		err = json.NewDecoder(resp.Body).Decode(&results)
-		fmt.Printf("Species length key from json: %d\n", len(results.Results))
+	resp, err = http.Get("http://api.gbif.org/v1/occurrence/search?country=" + countryIdentifier + "&limit=" + strconv.Itoa(limit)) 
+	if err != nil {
+		//handle error
+		fmt.Println("Error parsing request", err)
+		return
 	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&results)
+	fmt.Printf("Species key length from json: %d\n", len(results.Results))
 
 	for i := 0; i < len(results.Results); i++ {
 		nameAndKeyMap[results.Results[i].Species] = results.Results[i].SpeciesKey
@@ -103,7 +99,6 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-
 	w.Header().Add("content-type", "application/json")
 	_ = json.NewEncoder(w).Encode(country)
 }
