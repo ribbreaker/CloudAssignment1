@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 )
+var results Results
+var country Country
 var nameAndKeyMap = make(map[string]int)
 
 
@@ -50,8 +52,6 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 			limit = customLimitInt
 		}
 	}
-	results := Results{}
-	country := Country{}
 	//restcountries
 	resp, err := http.Get("https://restcountries.eu/rest/v2/alpha/" + countryIdentifier)
 	if err != nil {
